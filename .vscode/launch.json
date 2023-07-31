@@ -1,0 +1,104 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description":  "将反汇编风格设置为 Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "处理SIGUSR1信号",
+                    "text": "handel SIGUSR1 nostop",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "postgres 主函数",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "args": [
+                "-D",
+                "/home/pgdev/pg-data",
+                "-p",
+                "15432"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "处理SIGUSR1信号",
+                    "text": "handel SIGUSR1 nostop",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "postgres help",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "args": [
+                "--help"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "处理SIGUSR1信号",
+                    "text": "handel SIGUSR1 nostop",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "postgres backend",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "processId": "${command:pickProcess}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "处理SIGUSR1信号",
+                    "text": "handel SIGUSR1 nostop",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
