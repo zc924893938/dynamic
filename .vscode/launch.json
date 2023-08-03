@@ -5,7 +5,7 @@
             "name": "(gdb) attach",
             "type": "cppdbg",
             "request": "attach",
-            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "program": "/home/pgdev/pg-home/bin/postgres",
             "MIMode": "gdb",
             "setupCommands": [
                 {
@@ -29,7 +29,7 @@
             "name": "postgres 主函数",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "program": "/home/pgdev/pg-home/bin/postgres",
             "args": [
                 "-D",
                 "/home/pgdev/pg-data",
@@ -58,7 +58,7 @@
             "name": "postgres help",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "program": "/home/pgdev/pg-home/bin/postgres",
             "args": [
                 "--help"
             ],
@@ -84,7 +84,7 @@
             "name": "postgres backend",
             "type": "cppdbg",
             "request": "attach",
-            "program": "/home/pgdev/postgresql-12.1/src/backend/postgres",
+            "program": "/home/pgdev/pg-home/bin/postgres",
             "processId": "${command:pickProcess}",
             "MIMode": "gdb",
             "setupCommands": [
