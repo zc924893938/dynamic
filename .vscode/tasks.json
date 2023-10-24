@@ -7,7 +7,7 @@
         {
             "label": "Configure",
             "type": "shell",
-            "command": "./configure --prefix=/home/pgdev/pg-home --enable-debug --enable-cassert --enable-depend CFLAGS='-ggdb -fno-omit-frame-pointer -g -O0'",
+            "command": "./configure --prefix=/home/cy/pg-home --enable-debug --enable-cassert --enable-depend CFLAGS='-ggdb -fno-omit-frame-pointer -g -O0'",
             "problemMatcher": [
                 "$eslint-compact"
             ]
@@ -15,7 +15,7 @@
         {
             "label": "Make All",
             "type": "shell",
-            "command": "make -j4 all",
+            "command": "make -j 32",
             "problemMatcher": [
                 "$eslint-compact"
             ]
@@ -36,17 +36,18 @@
         {
             "label": "Restart Postgres",
             "type": "shell",
-            "command":"cd /home/pgdev/pg-home && pg_ctl -D ~/pg-data/ restart"
+            "command":"cd /home/cy/pg-home/bin && ./pg_ctl -D ~/pg-data/ restart"
         },
         {
             "label": "Stop Postgres",
             "type": "shell",
-            "command":"cd /home/pgdev/pg-home && pg_ctl -D ~/pg-data/ stop"
+            "command":"cd /home/cy/pg-home && pg_ctl -D ~/pg-data/ stop"
         },
         {
             "label": "Get pid of Postgres",
             "type": "shell",
-            "command":"cd /home/pgdev/pg-home && pg_ctl status"
+            "command":"ps -aux | grep ^cy.*postgres.*idle$"
         }
+        
     ]
 }

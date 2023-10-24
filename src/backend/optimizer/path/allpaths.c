@@ -50,6 +50,11 @@
 #include "utils/lsyscache.h"
 
 
+
+#include "executor/spi.h"
+#include "utils/guc.h"
+
+
 /* results of subquery_is_pushdown_safe */
 typedef struct pushdown_safety_info
 {
@@ -142,6 +147,20 @@ static void recurse_push_qual(Node *setOp, Query *topquery,
 							  RangeTblEntry *rte, Index rti, Node *qual);
 static void remove_unused_subquery_outputs(Query *subquery, RelOptInfo *rel);
 
+bool enable_dynamic_sample;
+
+
+
+
+//创建sample结构体
+typedef struct Sample
+{
+	Oid tableid;
+	int nrows;
+	HeapTuple *rows;
+	TupleDesc *tdesc;
+} Sample;
+
 
 /*
  * make_one_rel
@@ -178,6 +197,60 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 
 	/* Mark base rels as to whether we care about fast-start plans */
 	set_base_rel_consider_startup(root);
+
+	bool	reset;
+	// 增加采样的函数，将采样结果存入PlannerInfo中的某个sample列表中
+	if(enable_dynamic_sample)
+	{
+		Index rti;
+		for(rti = 1; rti< root->simple_rel_array_size;rti++)
+		{
+			Sample *sample; //??数组的定义
+			Oid tableoid = root ->simple_rel_array[rti]->relid;
+
+			sample->tableid = tableoid;
+			SPITupleTable  *spi_tuptable; // 初始化
+			TupleDesc		spi_tupdesc;
+			StringInfoData str;
+			int		ret;
+			uint64	proc;
+			int count = 0;
+			int targrows = 100;
+			RangeTblEntry *rte = planner_rt_fetch(rti, root);//这地方需要仔细看看，第一个变量是什么
+			Oid		relid = rte->relid;
+			double	sample_rate = 1;
+			List	   *context;
+			initStringInfo(&str); // SQL语句！
+
+			/* internal error */
+			if ((ret = SPI_connect()) < 0) // 初始化错误
+				elog(ERROR, "statext_collect_sample: SPI_connect returned %d", ret);
+
+			appendStringInfoString(&str, "SELECT * "); // SELECT
+			appendStringInfo(&str, " FROM %s.%s TABLESAMPLE BERNOULLI (%f)",
+							quote_identifier(get_namespace_name(get_rel_namespace(relid))),
+							quote_identifier(get_rel_name(relid)), 100 * sample_rate);
+
+			reset = enable_dynamic_sample;
+			enable_dynamic_sample = false;
+			ret = SPI_execute(str.data, true, 0);
+			proc = SPI_processed;
+			sample->nrows = proc;
+			sample->rows = SPI_tuptable->vals;
+			sample->tdesc = SPI_tuptable->tupdesc;
+			// if (ret != SPI_OK_SELECT || proc == 0)
+			// {
+			// 	// 啥都没有
+			// 	SPI_finish();
+			// 	//return NULL;
+			// 	continue;
+			// }
+			SPI_finish();
+			enable_dynamic_sample = reset;
+		}
+		
+	}
+	
 
 	/*
 	 * Compute size estimates and consider_parallel flags for each base rel.

@@ -95,6 +95,19 @@
 #include "utils/selfuncs.h"
 #include "utils/spccache.h"
 #include "utils/tuplesort.h"
+#include "utils/relcache.h"
+#include "utils/rel.h"
+#include "commands/sample_rows.h"
+
+#include "access/relation.h"
+#include "catalog/pg_constraint.h"
+#include "executor/spi.h"
+#include "nodes/pathnodes.h"
+#include "optimizer/pathnode.h"
+#include "parser/parsetree.h"
+#include "rewrite/rewriteManip.h"
+#include "utils/ruleutils.h"
+
 
 
 #define LOG2(x)  (log(x) / 0.693147180559945)
@@ -105,7 +118,6 @@
  * per-tuple cost as cpu_tuple_cost multiplied by this value.
  */
 #define APPEND_CPU_COST_MULTIPLIER 0.5
-
 
 double		seq_page_cost = DEFAULT_SEQ_PAGE_COST;
 double		random_page_cost = DEFAULT_RANDOM_PAGE_COST;
@@ -4400,6 +4412,59 @@ approx_tuple_count(PlannerInfo *root, JoinPath *path, List *quals)
  *	width: the estimated average output tuple width in bytes.
  *	baserestrictcost: estimated cost of evaluating baserestrictinfo clauses.
  */
+bool
+examine_opclause_args(List *args, Node **exprp, Const **cstp,
+					  bool *expronleftp)
+{
+	Node	   *expr;
+	Const	   *cst;
+	bool		expronleft;
+	Node	   *leftop,
+			   *rightop;
+
+	/* enforced by statext_is_compatible_clause_internal */
+	Assert(list_length(args) == 2);
+
+	leftop = linitial(args);
+	rightop = lsecond(args);
+
+	/* strip RelabelType from either side of the expression */
+	if (IsA(leftop, RelabelType))
+		leftop = (Node *) ((RelabelType *) leftop)->arg;
+
+	if (IsA(rightop, RelabelType))
+		rightop = (Node *) ((RelabelType *) rightop)->arg;
+
+	if (IsA(rightop, Const))
+	{
+		expr = (Node *) leftop;
+		cst = (Const *) rightop;
+		expronleft = true;
+	}
+	else if (IsA(leftop, Const))
+	{
+		expr = (Node *) rightop;
+		cst = (Const *) leftop;
+		expronleft = false;
+	}
+	else
+		return false;
+
+	/* return pointers to the extracted parts if requested */
+	if (exprp)
+		*exprp = expr;
+
+	if (cstp)
+		*cstp = cst;
+
+	if (expronleftp)
+		*expronleftp = expronleft;
+
+	return true;
+}
+
+
+
 void
 set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 {
@@ -4407,6 +4472,103 @@ set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 
 	/* Should only be applied to base relations */
 	Assert(rel->relid > 0);
+
+	// SPITupleTable  *spi_tuptable; // 初始化
+	// TupleDesc		spi_tupdesc;
+	// StringInfoData str;
+	// int		ret;
+	// uint64	proc;
+	// int count = 0;
+	// int targrows = 100;
+	// RangeTblEntry *rte = planner_rt_fetch(rel->relid, root);
+	// Oid		relid = rte->relid;
+	// double	sample_rate = 0.01;
+	// List	   *context;
+	// initStringInfo(&str); // SQL语句！
+
+	// /* internal error */
+	//  if ((ret = SPI_connect()) < 0) // 初始化错误
+	//  	elog(ERROR, "statext_collect_sample: SPI_connect returned %d", ret);
+
+	//  appendStringInfoString(&str, "SELECT * "); // SELECT
+
+	//  appendStringInfo(&str, " FROM %s.%s TABLESAMPLE BERNOULLI (%f)",
+	//  				 quote_identifier(get_namespace_name(get_rel_namespace(relid))),
+	//  				 quote_identifier(get_rel_name(relid)), 100 * sample_rate);
+
+	// ret = SPI_execute(str.data, true, 0);
+	// proc = SPI_processed;
+	// if (ret != SPI_OK_SELECT || proc == 0)
+	// {
+	// 	SPI_finish();
+	// 	return NULL;
+	// }
+	// spi_tuptable = SPI_tuptable;
+	// spi_tupdesc = spi_tuptable->tupdesc;
+
+
+	// int targrows = 100; // 设置抽样行数
+    // HeapTuple *rows = palloc(sizeof(HeapTuple) * targrows);
+    // double *totalrows=	NULL, *totaldeadrows=NULL;
+	// int count = 0;
+	// Relation onerel = try_relation_open(rel->relid, ShareUpdateExclusiveLock);
+	// acquire_sample_rows( onerel, 13,rows, targrows,totalrows, totaldeadrows);
+	// List *clauses = rel->baserestrictinfo;
+
+	
+	// for(int i = 0; i<targrows;i++)
+	// {
+	// 	HeapTuple row = rows[i];
+	// 	bool match_final = true;
+	// 	ListCell   *l;
+	// 	foreach(l, clauses)
+	// 	{
+	// 		bool match = true;
+	// 		Node	   *clause = (Node *) lfirst(l);
+	// 		if (IsA(clause, RestrictInfo))
+	// 		clause = (Node *) ((RestrictInfo *) clause)->clause;
+	// 		if (is_opclause(clause)) 
+	// 		{
+	// 			OpExpr	   *expr = (OpExpr *) clause;
+	// 			FmgrInfo	opproc;  // FmgrInfo用于存储待调用函数的信息，如函数的地址、输入输出数据类型等。
+
+	// 			/* valid only after examine_opclause_args returns true */
+	// 			Node	   *clause_expr;
+	// 			Const	   *cst;
+	// 			bool		expronleft;
+	// 			//int			idx;
+	// 			Oid			collid; // collation,整理，函数的oid？具体使用什么函数处理数据？
+	// 			//int			i;
+	// 			fmgr_info(get_opcode(expr->opno), &opproc);
+	// 			if (!examine_opclause_args(expr->args, &clause_expr, &cst, &expronleft))
+	// 				elog(ERROR, "incompatible clause");
+				
+	// 			if (IsA(expr, Var))
+	// 			{
+	// 				/* simple Var, so just lookup using varattno */
+	// 				Var		   *var = (Var *) expr;
+	// 				bool *flag = false;
+	// 				Datum h = heap_getattr(row, var->varattno, onerel->rd_att,
+	// 										   flag);
+	// 				if (expronleft) // 表达式或属性值在子句的左侧
+	// 				match = DatumGetBool(FunctionCall2Coll(&opproc,
+	// 													   collid,
+	// 													   h, // 表达式值
+	// 													   cst->constvalue)); // 常量值
+	// 				else
+	// 				match = DatumGetBool(FunctionCall2Coll(&opproc,
+	// 													   collid,
+	// 													   cst->constvalue,
+	// 													   h));
+	// 				if(!match) match_final = false;
+	// 			}
+				
+	// 		}
+	// 	}
+	// 	if(match_final) count++;
+	// }
+
+	// nrows = rel->tuples *(count/targrows);
 
 	nrows = rel->tuples *
 		clauselist_selectivity(root,

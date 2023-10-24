@@ -124,6 +124,8 @@ extern char *temp_tablespaces;
 extern bool ignore_checksum_failure;
 extern bool synchronize_seqscans;
 
+extern bool enable_dynamic_sample;//是否采样标志
+
 #ifdef TRACE_SYNCSCAN
 extern bool trace_syncscan;
 #endif
@@ -1687,6 +1689,8 @@ static struct config_bool ConfigureNamesBool[] =
 	},
 #endif
 
+
+
 	{
 		{"integer_datetimes", PGC_INTERNAL, PRESET_OPTIONS,
 			gettext_noop("Datetimes are integer based."),
@@ -1948,6 +1952,15 @@ static struct config_bool ConfigureNamesBool[] =
 			gettext_noop("Whether to continue running after a failure to sync data files."),
 		},
 		&data_sync_retry,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"enable_dynamic_sample", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Decides whether sampling will be used for cardinality estimates for scans."),
+		},
+		&enable_dynamic_sample,
 		false,
 		NULL, NULL, NULL
 	},

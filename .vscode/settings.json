@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "spccache.h": "c",
+        "relcache.h": "c"
+    }
+}

@@ -272,6 +272,8 @@ extern int	tcp_keepalives_interval;
 extern int	tcp_keepalives_count;
 extern int	tcp_user_timeout;
 
+extern bool enable_dynamic_sample;
+
 #ifdef TRACE_SORT
 extern bool trace_sort;
 #endif
