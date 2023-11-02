@@ -315,4 +315,14 @@ extern RelOptInfo *build_child_join_rel(PlannerInfo *root,
 										RelOptInfo *parent_joinrel, List *restrictlist,
 										SpecialJoinInfo *sjinfo, JoinType jointype);
 
+//创建sample结构体
+typedef struct Sample 
+{
+	Oid tableid;
+	int nrows;
+	HeapTuple *rows;
+	TupleDesc *tdesc;
+} Sample;
+
+
 #endif							/* PATHNODE_H */

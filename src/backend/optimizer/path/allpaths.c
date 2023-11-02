@@ -152,14 +152,7 @@ bool enable_dynamic_sample;
 
 
 
-//创建sample结构体
-typedef struct Sample
-{
-	Oid tableid;
-	int nrows;
-	HeapTuple *rows;
-	TupleDesc *tdesc;
-} Sample;
+
 
 
 /*
@@ -174,11 +167,17 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 	Index		rti;
 	double		total_pages;
 
+	//定义一个存储所有的
+
+
 	/*
 	 * Construct the all_baserels Relids set.
 	 */
 	root->all_baserels = NULL;
+	root->samplelist = NULL;
 	for (rti = 1; rti < root->simple_rel_array_size; rti++)
+
+
 	{
 		RelOptInfo *brel = root->simple_rel_array[rti];
 
@@ -205,7 +204,8 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 		Index rti;
 		for(rti = 1; rti< root->simple_rel_array_size;rti++)
 		{
-			Sample *sample; //??数组的定义
+			// Sample *sample; //??数组的定义
+			Sample *sample = palloc(sizeof(Sample));
 			Oid tableoid = root ->simple_rel_array[rti]->relid;
 
 			sample->tableid = tableoid;
@@ -219,7 +219,7 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 			RangeTblEntry *rte = planner_rt_fetch(rti, root);//这地方需要仔细看看，第一个变量是什么
 			Oid		relid = rte->relid;
 			double	sample_rate = 1;
-			List	   *context;
+			//List	   *context;
 			initStringInfo(&str); // SQL语句！
 
 			/* internal error */
@@ -247,6 +247,9 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 			// }
 			SPI_finish();
 			enable_dynamic_sample = reset;
+
+			root->samplelist = lappend(root->samplelist, sample); //将采样的表样本加入list
+			
 		}
 		
 	}

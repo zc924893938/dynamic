@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "spccache.h": "c",
-        "relcache.h": "c"
+        "relcache.h": "c",
+        "pathnode.h": "c"
     }
 }

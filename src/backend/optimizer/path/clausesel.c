@@ -82,6 +82,8 @@ clauselist_selectivity(PlannerInfo *root,
 	 * it has extended statistics, try to apply those.
 	 */
 	rel = find_single_rel_for_clauses(root, clauses);
+
+	//
 	if (rel && rel->rtekind == RTE_RELATION && rel->statlist != NIL)
 	{
 		/*

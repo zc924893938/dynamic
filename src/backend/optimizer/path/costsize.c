@@ -157,6 +157,8 @@ typedef struct
 	QualCost	total;
 } cost_qual_eval_context;
 
+
+
 static List *extract_nonindex_conditions(List *qual_clauses, List *indexclauses);
 static MergeScanSelCache *cached_scansel(PlannerInfo *root,
 										 RestrictInfo *rinfo,
@@ -4569,9 +4571,77 @@ set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 	// }
 
 	// nrows = rel->tuples *(count/targrows);
+	if(enable_dynamic_sample)
+	{
+		ListCell *s;
+		List *clauses = rel->baserestrictinfo;
+		foreach(s, root->samplelist)
+		{
+			Relation onerel = try_relation_open(rel->relid, ShareUpdateExclusiveLock);
+			int count =0;
+			Sample *sample = (Sample*) lfirst(s);
+			RangeTblEntry *rte = planner_rt_fetch(rel->relid, root);
+			Oid		relid = rte->relid;
+			if (sample->tableid == relid)
+			{
+				for(int i = 0; i<sample->nrows;i++)
+				{
+					HeapTuple row = sample-> rows[i];
+					bool match_final = true;
+					ListCell   *l;
+					foreach(l, clauses)
+					{
+						bool match = true;
+						Node	   *clause = (Node *) lfirst(l);
+						if (IsA(clause, RestrictInfo))
+						clause = (Node *) ((RestrictInfo *) clause)->clause;
+						if (is_opclause(clause)) 
+						{
+							OpExpr	   *expr = (OpExpr *) clause;
+							FmgrInfo	opproc;  // FmgrInfo用于存储待调用函数的信息，如函数的地址、输入输出数据类型等。
 
-	nrows = rel->tuples *
-		clauselist_selectivity(root,
+							/* valid only after examine_opclause_args returns true */
+							Node	   *clause_expr;
+							Const	   *cst;
+							bool		expronleft;
+							//int			idx;
+							Oid			collid; // collation,整理，函数的oid？具体使用什么函数处理数据？
+							//int			i;
+							fmgr_info(get_opcode(expr->opno), &opproc);
+							if (!examine_opclause_args(expr->args, &clause_expr, &cst, &expronleft))
+								elog(ERROR, "incompatible clause");
+							
+							if (IsA(expr, Var))
+							{
+								/* simple Var, so just lookup using varattno */
+								Var		   *var = (Var *) expr;
+								bool *flag = false;
+								Datum h = heap_getattr(row, var->varattno, onerel->rd_att,
+														flag);
+								if (expronleft) // 表达式或属性值在子句的左侧
+								match = DatumGetBool(FunctionCall2Coll(&opproc,
+																	collid,
+																	h, // 表达式值
+																	cst->constvalue)); // 常量值
+								else
+								match = DatumGetBool(FunctionCall2Coll(&opproc,
+																	collid,
+																	cst->constvalue,
+																	h));
+								if(!match) match_final = false;
+							}
+							
+						}
+					}
+					if(match_final) count++;
+				}
+					nrows = rel->tuples *(count/sample->nrows);
+				}
+		}
+	}
+	else
+		nrows = rel->tuples *
+			clauselist_selectivity(root,
 							   rel->baserestrictinfo,
 							   0,
 							   JOIN_INNER,

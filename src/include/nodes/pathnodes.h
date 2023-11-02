@@ -360,6 +360,9 @@ struct PlannerInfo
 
 	/* Does this query modify any partition key columns? */
 	bool		partColsUpdated;
+
+	/* 采样的结果 */
+	List        *samplelist;
 };
 
 
